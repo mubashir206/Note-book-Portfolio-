@@ -13,7 +13,7 @@
         </div>
         <div class="text-right">
           <p class="text-sm font-semibold text-gray-600">Oct 2023 - Present</p>
-          <p class="text-sm text-gray-500">(2 Years)</p>
+          <p class="text-sm text-gray-500">(3 Years)</p>
         </div>
       </div>
 
