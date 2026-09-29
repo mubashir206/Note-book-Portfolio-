@@ -105,26 +105,63 @@
 
       <!-- Page Indicator -->
       <div class="page-indicator">
-        <div v-for="(page, index) in Math.ceil(totalPages / 2)" :key="index" 
-             :class="['dot', { active: Math.floor(currentPageIndex / 2) === index }]"
-             @click="goToPage(index * 2)"
+        <div v-for="(page, index) in indicatorCount" :key="index" 
+             :class="['dot', { active: activeIndicator === index }]"
+             @click.stop="goToPage(isMobile ? index : index * 2)"
         ></div>
       </div>
 
       <!-- Page Counter -->
       <div class="page-counter">
-        {{ currentPageIndex + 1 }}-{{ Math.min(currentPageIndex + 2, totalPages) }} / {{ totalPages }}
+        {{ displayPageLabel }}
+      </div>
+
+      <!-- Mobile Nav: Back / Close / Next (desktop uses page clicks) -->
+      <div v-if="isMobile" class="mobile-nav" @click.stop>
+        <button
+          type="button"
+          class="mobile-nav-btn"
+          :disabled="!canGoPrev || isFlipping"
+          @click="previousPage"
+          aria-label="Previous page"
+        >
+          ← Back
+        </button>
+        <button
+          type="button"
+          class="mobile-nav-btn close-btn"
+          :disabled="isFlipping"
+          @click="closeBook"
+          aria-label="Close book"
+        >
+          Close
+        </button>
+        <button
+          type="button"
+          class="mobile-nav-btn primary"
+          :disabled="(!canGoNext && !isLastPage) || isFlipping"
+          @click="handleMobileNext"
+          aria-label="Next page"
+        >
+          {{ isLastPage && !canGoNext ? 'Close 📕' : 'Next →' }}
+        </button>
       </div>
 
       <!-- Click Hint -->
-      <div class="click-hint" v-if="currentPageIndex === 0">
+      <div class="click-hint" v-if="currentPageIndex === 0 && !isMobile">
         <div class="hint-text">
           ← Click pages to navigate →
         </div>
       </div>
 
+      <div class="click-hint" v-if="currentPageIndex === 0 && isMobile">
+        <div class="hint-text">
+          Use Back / Next below
+        </div>
+      </div>
+
       <!-- Close Book Hint on Last Page -->
-      <div class="click-hint" v-if="isLastPage">
+      <div class="click-hint" v-if="isLastPage && !isMobile">
         <div class="hint-text close-hint">
           Click to Close Book 📕
         </div>
@@ -143,6 +180,7 @@ import CompetenciesPage from './pages/CompetenciesPage.vue'
 import ExperiencePage from './pages/ExperiencePage.vue'
 import ProjectsPage1 from './pages/ProjectsPage1.vue'
 import ProjectsPage2 from './pages/ProjectsPage2.vue'
+import ProjectsPage3 from './pages/ProjectsPage3.vue'
 import EducationPage from './pages/EducationPage.vue'
 import BackCoverPage from './pages/BackCoverPage.vue'
 
@@ -154,6 +192,7 @@ const pages = [
   ExperiencePage,
   ProjectsPage1,
   ProjectsPage2,
+  ProjectsPage3,
   EducationPage,
   BackCoverPage
 ]
@@ -163,6 +202,13 @@ const totalPages = pages.length
 const isFlipping = ref(false)
 const direction = ref('forward') // Track flip direction
 const isBookOpen = ref(false) // Book starts closed
+const isMobile = ref(false)
+
+const updateIsMobile = () => {
+  isMobile.value = window.matchMedia('(max-width: 768px)').matches
+}
+
+const pageStep = computed(() => (isMobile.value ? 1 : 2))
 
 const leftPageComponent = computed(() => {
   const leftIndex = currentPageIndex.value
@@ -170,25 +216,58 @@ const leftPageComponent = computed(() => {
 })
 
 const currentPageComponent = computed(() => {
+  if (isMobile.value) {
+    return pages[currentPageIndex.value] || null
+  }
   const rightIndex = currentPageIndex.value + 1
   return pages[rightIndex] || pages[currentPageIndex.value]
 })
 
 const nextPageComponent = computed(() => {
+  if (isMobile.value) {
+    return pages[currentPageIndex.value + 1] || null
+  }
   const nextLeftIndex = currentPageIndex.value + 2
   return pages[nextLeftIndex] || null
 })
 
-const canGoNext = computed(() => currentPageIndex.value < totalPages - 2)
+const canGoNext = computed(() => {
+  if (isMobile.value) {
+    return currentPageIndex.value < totalPages - 1
+  }
+  return currentPageIndex.value < totalPages - 2
+})
+
 const canGoPrev = computed(() => currentPageIndex.value > 0)
-const isLastPage = computed(() => currentPageIndex.value >= totalPages - 2)
+
+const isLastPage = computed(() => {
+  if (isMobile.value) {
+    return currentPageIndex.value >= totalPages - 1
+  }
+  return currentPageIndex.value >= totalPages - 2
+})
+
+const displayPageLabel = computed(() => {
+  if (isMobile.value) {
+    return `${currentPageIndex.value + 1} / ${totalPages}`
+  }
+  return `${currentPageIndex.value + 1}-${Math.min(currentPageIndex.value + 2, totalPages)} / ${totalPages}`
+})
+
+const indicatorCount = computed(() =>
+  isMobile.value ? totalPages : Math.ceil(totalPages / 2)
+)
+
+const activeIndicator = computed(() =>
+  isMobile.value ? currentPageIndex.value : Math.floor(currentPageIndex.value / 2)
+)
 
 const nextPage = () => {
   if (canGoNext.value && !isFlipping.value) {
     direction.value = 'forward'
     isFlipping.value = true
     setTimeout(() => {
-      currentPageIndex.value += 2
+      currentPageIndex.value += pageStep.value
       isFlipping.value = false
     }, 700)
   }
@@ -199,17 +278,43 @@ const previousPage = () => {
     direction.value = 'backward'
     isFlipping.value = true
     setTimeout(() => {
-      currentPageIndex.value -= 2
+      currentPageIndex.value = Math.max(0, currentPageIndex.value - pageStep.value)
       isFlipping.value = false
     }, 700)
   }
 }
 
-const handleRightPageClick = () => {
+const handleRightPageClick = (event) => {
+  // Mobile: page tap uses left/right zones so Back still works without left page
+  if (isMobile.value) {
+    const target = event.currentTarget
+    const rect = target.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const isLeftZone = x < rect.width * 0.4
+
+    if (isLeftZone) {
+      if (canGoPrev.value) previousPage()
+      return
+    }
+
+    if (canGoNext.value) {
+      nextPage()
+    }
+    // Last page: do NOT auto-close on tap — user uses Back or Close button
+    return
+  }
+
   if (canGoNext.value) {
     nextPage()
   } else if (isLastPage.value) {
-    // Close the book when on last page
+    closeBook()
+  }
+}
+
+const handleMobileNext = () => {
+  if (canGoNext.value) {
+    nextPage()
+  } else if (isLastPage.value) {
     closeBook()
   }
 }
@@ -231,18 +336,19 @@ const goToPage = (page) => {
   }
 }
 
-// Open book function - keeps current page state
+// Open book — if closed from last page on mobile, step back one so Back works again
 const openBook = () => {
   if (!isBookOpen.value) {
+    if (isMobile.value && currentPageIndex.value >= totalPages - 1) {
+      currentPageIndex.value = Math.max(0, currentPageIndex.value - pageStep.value)
+    }
     isBookOpen.value = true
-    // Don't reset page - continue from where it was closed
   }
 }
 
 // Close book function - preserves current page
 const closeBook = () => {
   if (isBookOpen.value) {
-    // Don't reset page - keep current position for next open
     isBookOpen.value = false
   }
 }
@@ -259,10 +365,13 @@ const handleKeyPress = (event) => {
 }
 
 onMounted(() => {
+  updateIsMobile()
+  window.addEventListener('resize', updateIsMobile)
   window.addEventListener('keydown', handleKeyPress)
 })
 
 onUnmounted(() => {
+  window.removeEventListener('resize', updateIsMobile)
   window.removeEventListener('keydown', handleKeyPress)
 })
 </script>
@@ -909,14 +1018,16 @@ onUnmounted(() => {
 .page-content {
   width: 100%;
   height: 100%;
-  overflow-y: hidden;
+  overflow-y: auto;
   overflow-x: hidden;
-  padding: 20px;
+  padding: 12px;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* Enable scroll only for specific pages with lots of content */
-.page-content:has(.overflow-y-auto) {
-  overflow-y: auto;
+@media (min-width: 768px) {
+  .page-content {
+    padding: 20px;
+  }
 }
 
 .back-side .page-content {
@@ -988,6 +1099,59 @@ onUnmounted(() => {
   z-index: 20;
 }
 
+/* Mobile Back / Close / Next */
+.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-nav {
+    display: flex;
+    position: absolute;
+    bottom: -118px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(96vw, 460px);
+    gap: 8px;
+    z-index: 30;
+    padding: 0 4px;
+  }
+
+  .mobile-nav-btn {
+    flex: 1;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(15, 23, 42, 0.72);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.7rem 0.4rem;
+    border-radius: 999px;
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+  }
+
+  .mobile-nav-btn.primary {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    border-color: transparent;
+  }
+
+  .mobile-nav-btn.close-btn {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(248, 113, 113, 0.5);
+    flex: 0.85;
+  }
+
+  .mobile-nav-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .mobile-nav-btn:not(:disabled):active {
+    transform: scale(0.97);
+  }
+}
+
 /* Click Hint */
 .click-hint {
   position: absolute;
@@ -1021,11 +1185,126 @@ onUnmounted(() => {
   50% { opacity: 1; }
 }
 
-/* Mobile Responsive */
-@media (max-width: 768px) {
+/* Tablet */
+@media (max-width: 1024px) {
+  .closed-book-wrapper,
   .book-container {
-    width: 95%;
-    height: 75vh;
+    width: 94vw;
+    height: 80vh;
+    max-height: 820px;
+  }
+
+  .cover-title {
+    font-size: 2.75rem;
+  }
+
+  .cover-author {
+    font-size: 1.6rem;
+  }
+
+  .real-closed-book {
+    width: 70%;
+  }
+}
+
+/* Mobile / narrow screens */
+@media (max-width: 768px) {
+  .book-wrapper {
+    height: 100dvh;
+    min-height: 100vh;
+    padding: 10px 0 140px;
+    box-sizing: border-box;
+  }
+
+  .closed-book-wrapper {
+    width: min(96vw, 460px);
+    height: min(74dvh, 680px);
+    max-height: none;
+    perspective: 1200px;
+  }
+
+  .real-closed-book {
+    width: 100%;
+    transform: rotateY(-6deg);
+  }
+
+  .real-closed-book:hover {
+    transform: rotateY(-4deg) translateY(-4px);
+  }
+
+  .book-spine-edge {
+    width: 28px;
+    border-radius: 10px 0 0 10px;
+  }
+
+  .book-spine-edge::after {
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+  }
+
+  .book-front-cover {
+    border-radius: 0 12px 12px 0;
+  }
+
+  .book-front-cover::after,
+  .closed-cover::after {
+    inset: 10px;
+    border-width: 2px;
+  }
+
+  .cover-design {
+    padding: 1.25rem 1rem;
+  }
+
+  .cover-title {
+    font-size: clamp(1.75rem, 8vw, 2.4rem);
+    letter-spacing: 0.06em;
+    margin: 0.5rem 0;
+  }
+
+  .cover-author {
+    font-size: clamp(1.1rem, 5vw, 1.45rem);
+  }
+
+  .cover-subtitle {
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+  }
+
+  .cover-ornament-top,
+  .cover-ornament-bottom {
+    width: 70%;
+    margin: 0.5rem 0;
+  }
+
+  .cover-divider {
+    width: 55%;
+    margin: 0.85rem 0;
+  }
+
+  .click-to-open {
+    bottom: 1rem;
+    font-size: 0.8rem;
+  }
+
+  .book-pages-right-edge {
+    width: 8px;
+    right: -2px;
+  }
+
+  .book-container {
+    width: min(96vw, 460px);
+    height: min(74dvh, 680px);
+    max-height: none;
+  }
+
+  .book-page,
+  .page-side {
+    overflow: hidden;
+  }
+
+  .page-content {
+    padding: 0;
   }
 
   .book-inner {
@@ -1037,29 +1316,75 @@ onUnmounted(() => {
     height: 100%;
   }
 
-  .left-page {
-    display: none;
+  .left-page,
+  .book-spine,
+  .pages-stack,
+  .hidden-next {
+    display: none !important;
   }
 
   .right-page {
-    border-radius: 20px;
+    border-radius: 16px;
+    width: 100%;
   }
 
-  .book-spine {
-    display: none;
+  .front-side,
+  .back-side {
+    border-radius: 16px;
   }
 
-  .nav-btn {
-    width: 60px;
-    height: 60px;
+  .page-indicator {
+    bottom: -42px;
+    gap: 8px;
   }
 
-  .nav-btn.left {
-    left: 15px;
+  .page-counter {
+    bottom: -64px;
+    font-size: 13px;
   }
 
-  .nav-btn.right {
-    right: 15px;
+  .page-indicator {
+    bottom: -38px;
+  }
+
+  .click-hint {
+    top: -48px;
+    width: 90%;
+  }
+
+  .hint-text {
+    font-size: 12px;
+    padding: 8px 14px;
+    text-align: center;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  .dot.active {
+    width: 24px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 400px) {
+  .book-spine-edge {
+    width: 22px;
+  }
+
+  .book-spine-edge::after {
+    content: '';
+  }
+
+  .cover-design {
+    padding: 1rem 0.75rem;
+  }
+
+  .closed-book-wrapper,
+  .book-container {
+    width: 96vw;
   }
 }
 
