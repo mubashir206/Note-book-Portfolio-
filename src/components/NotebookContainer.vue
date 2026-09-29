@@ -57,7 +57,7 @@
           <!-- Left Page (Clickable) -->
           <div 
             class="book-page left-page"
-            :class="{ 'clickable': canGoPrev }"
+            :class="{ 'clickable': canGoPrev || isFirstPage }"
             @click="handleLeftPageClick"
           >
             <div class="page-content">
@@ -74,7 +74,7 @@
             :class="{ 
               'flipping-forward': isFlipping && direction === 'forward',
               'flipping-backward': isFlipping && direction === 'backward',
-              'clickable': canGoNext || isLastPage 
+              'clickable': canGoNext || isLastPage || isFirstPage 
             }"
             @click="handleRightPageClick"
           >
@@ -116,10 +116,15 @@
         {{ displayPageLabel }}
       </div>
 
-      <!-- Close Book Hint on Last Page -->
+      <!-- Close / first-page hints -->
       <div class="click-hint" v-if="isLastPage">
         <div class="hint-text close-hint">
           {{ isMobile ? 'Tap page or Close to shut book' : 'Click to Close Book 📕' }}
+        </div>
+      </div>
+      <div class="click-hint" v-else-if="isFirstPage && isMobile">
+        <div class="hint-text close-hint">
+          Left tap or Back = close · Right tap = next
         </div>
       </div>
       </div>
@@ -130,11 +135,11 @@
       <button
         type="button"
         class="mobile-nav-btn"
-        :disabled="!canGoPrev || isFlipping"
-        @click="previousPage"
-        aria-label="Previous page"
+        :disabled="isFlipping"
+        @click="handleMobileBack"
+        aria-label="Previous page or close book"
       >
-        ← Back
+        {{ isFirstPage ? 'Close 📕' : '← Back' }}
       </button>
       <button
         type="button"
@@ -228,6 +233,8 @@ const canGoNext = computed(() => {
 
 const canGoPrev = computed(() => currentPageIndex.value > 0)
 
+const isFirstPage = computed(() => currentPageIndex.value === 0)
+
 const isLastPage = computed(() => {
   if (isMobile.value) {
     return currentPageIndex.value >= totalPages - 1
@@ -273,23 +280,34 @@ const previousPage = () => {
 }
 
 const handleRightPageClick = (event) => {
-  // Ignore clicks on links / buttons inside page content
   const interactive = event.target.closest('a, button, input, textarea, select')
   if (interactive) return
 
-  // Mobile: left zone = back, right zone = next, last page = close
   if (isMobile.value) {
     const target = event.currentTarget
     const rect = target.getBoundingClientRect()
     const clientX = event.clientX ?? event.changedTouches?.[0]?.clientX ?? 0
     const x = clientX - rect.left
-    const isLeftZone = x < rect.width * 0.4
+    const isLeftZone = x < rect.width * 0.45
 
-    if (isLeftZone && canGoPrev.value) {
-      previousPage()
+    // First page (photo intro):
+    // left tap / back = close book | right tap = next page
+    if (isFirstPage.value) {
+      if (isLeftZone) {
+        closeBook()
+      } else if (canGoNext.value) {
+        nextPage()
+      }
       return
     }
 
+    // Left side = go back
+    if (isLeftZone) {
+      if (canGoPrev.value) previousPage()
+      return
+    }
+
+    // Right side = next, or close on last page
     if (canGoNext.value) {
       nextPage()
       return
@@ -308,6 +326,15 @@ const handleRightPageClick = (event) => {
   }
 }
 
+const handleMobileBack = () => {
+  // First page Back = close book (same as going back past start)
+  if (isFirstPage.value) {
+    closeBook()
+    return
+  }
+  previousPage()
+}
+
 const handleMobileNext = () => {
   if (canGoNext.value) {
     nextPage()
@@ -317,9 +344,12 @@ const handleMobileNext = () => {
 }
 
 const handleLeftPageClick = () => {
-  if (canGoPrev.value) {
-    previousPage()
+  // Desktop: first spread left page click closes book
+  if (!canGoPrev.value) {
+    closeBook()
+    return
   }
+  previousPage()
 }
 
 const goToPage = (page) => {
