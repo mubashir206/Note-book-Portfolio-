@@ -74,7 +74,7 @@
             :class="{ 
               'flipping-forward': isFlipping && direction === 'forward',
               'flipping-backward': isFlipping && direction === 'backward',
-              'clickable': canGoNext 
+              'clickable': canGoNext || isLastPage 
             }"
             @click="handleRightPageClick"
           >
@@ -116,58 +116,45 @@
         {{ displayPageLabel }}
       </div>
 
-      <!-- Mobile Nav: Back / Close / Next (desktop uses page clicks) -->
-      <div v-if="isMobile" class="mobile-nav" @click.stop>
-        <button
-          type="button"
-          class="mobile-nav-btn"
-          :disabled="!canGoPrev || isFlipping"
-          @click="previousPage"
-          aria-label="Previous page"
-        >
-          ← Back
-        </button>
-        <button
-          type="button"
-          class="mobile-nav-btn close-btn"
-          :disabled="isFlipping"
-          @click="closeBook"
-          aria-label="Close book"
-        >
-          Close
-        </button>
-        <button
-          type="button"
-          class="mobile-nav-btn primary"
-          :disabled="(!canGoNext && !isLastPage) || isFlipping"
-          @click="handleMobileNext"
-          aria-label="Next page"
-        >
-          {{ isLastPage && !canGoNext ? 'Close 📕' : 'Next →' }}
-        </button>
-      </div>
-
-      <!-- Click Hint -->
-      <div class="click-hint" v-if="currentPageIndex === 0 && !isMobile">
-        <div class="hint-text">
-          ← Click pages to navigate →
-        </div>
-      </div>
-
-      <div class="click-hint" v-if="currentPageIndex === 0 && isMobile">
-        <div class="hint-text">
-          Use Back / Next below
-        </div>
-      </div>
-
       <!-- Close Book Hint on Last Page -->
-      <div class="click-hint" v-if="isLastPage && !isMobile">
+      <div class="click-hint" v-if="isLastPage">
         <div class="hint-text close-hint">
-          Click to Close Book 📕
+          {{ isMobile ? 'Tap page or Close to shut book' : 'Click to Close Book 📕' }}
         </div>
       </div>
       </div>
     </transition>
+
+    <!-- Outside book-container so transform/overflow cannot clip these buttons -->
+    <div v-if="isBookOpen && isMobile" class="mobile-nav" @click.stop>
+      <button
+        type="button"
+        class="mobile-nav-btn"
+        :disabled="!canGoPrev || isFlipping"
+        @click="previousPage"
+        aria-label="Previous page"
+      >
+        ← Back
+      </button>
+      <button
+        type="button"
+        class="mobile-nav-btn close-btn"
+        :disabled="isFlipping"
+        @click="closeBook"
+        aria-label="Close book"
+      >
+        Close 📕
+      </button>
+      <button
+        type="button"
+        class="mobile-nav-btn primary"
+        :disabled="(!canGoNext && !isLastPage) || isFlipping"
+        @click="handleMobileNext"
+        aria-label="Next page"
+      >
+        {{ isLastPage && !canGoNext ? 'Close 📕' : 'Next →' }}
+      </button>
+    </div>
   </div>
 </template>
 
@@ -205,7 +192,8 @@ const isBookOpen = ref(false) // Book starts closed
 const isMobile = ref(false)
 
 const updateIsMobile = () => {
-  isMobile.value = window.matchMedia('(max-width: 768px)').matches
+  // Prefer viewport width — DevTools device mode + real phones
+  isMobile.value = window.innerWidth <= 768
 }
 
 const pageStep = computed(() => (isMobile.value ? 1 : 2))
@@ -285,22 +273,31 @@ const previousPage = () => {
 }
 
 const handleRightPageClick = (event) => {
-  // Mobile: page tap uses left/right zones so Back still works without left page
+  // Ignore clicks on links / buttons inside page content
+  const interactive = event.target.closest('a, button, input, textarea, select')
+  if (interactive) return
+
+  // Mobile: left zone = back, right zone = next, last page = close
   if (isMobile.value) {
     const target = event.currentTarget
     const rect = target.getBoundingClientRect()
-    const x = event.clientX - rect.left
+    const clientX = event.clientX ?? event.changedTouches?.[0]?.clientX ?? 0
+    const x = clientX - rect.left
     const isLeftZone = x < rect.width * 0.4
 
-    if (isLeftZone) {
-      if (canGoPrev.value) previousPage()
+    if (isLeftZone && canGoPrev.value) {
+      previousPage()
       return
     }
 
     if (canGoNext.value) {
       nextPage()
+      return
     }
-    // Last page: do NOT auto-close on tap — user uses Back or Close button
+
+    if (isLastPage.value) {
+      closeBook()
+    }
     return
   }
 
@@ -336,19 +333,15 @@ const goToPage = (page) => {
   }
 }
 
-// Open book — if closed from last page on mobile, step back one so Back works again
+// Open book — keep current page (including last) so Close → Open feels consistent
 const openBook = () => {
   if (!isBookOpen.value) {
-    if (isMobile.value && currentPageIndex.value >= totalPages - 1) {
-      currentPageIndex.value = Math.max(0, currentPageIndex.value - pageStep.value)
-    }
     isBookOpen.value = true
   }
 }
 
-// Close book function - preserves current page
 const closeBook = () => {
-  if (isBookOpen.value) {
+  if (isBookOpen.value && !isFlipping.value) {
     isBookOpen.value = false
   }
 }
@@ -1099,7 +1092,7 @@ onUnmounted(() => {
   z-index: 20;
 }
 
-/* Mobile Back / Close / Next */
+/* Mobile Back / Close / Next — fixed to viewport so overflow can't hide it */
 .mobile-nav {
   display: none;
 }
@@ -1107,27 +1100,30 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .mobile-nav {
     display: flex;
-    position: absolute;
-    bottom: -118px;
+    position: fixed;
     left: 50%;
+    bottom: max(12px, env(safe-area-inset-bottom));
     transform: translateX(-50%);
     width: min(96vw, 460px);
     gap: 8px;
-    z-index: 30;
-    padding: 0 4px;
+    z-index: 100;
+    padding: 0 8px;
+    pointer-events: auto;
   }
 
   .mobile-nav-btn {
     flex: 1;
     border: 1px solid rgba(255, 255, 255, 0.35);
-    background: rgba(15, 23, 42, 0.72);
+    background: rgba(15, 23, 42, 0.88);
     color: #fff;
     font-size: 0.78rem;
     font-weight: 700;
-    padding: 0.7rem 0.4rem;
+    padding: 0.75rem 0.4rem;
     border-radius: 999px;
     backdrop-filter: blur(8px);
     cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
     transition: background 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
   }
 
@@ -1137,9 +1133,9 @@ onUnmounted(() => {
   }
 
   .mobile-nav-btn.close-btn {
-    background: rgba(239, 68, 68, 0.25);
-    border-color: rgba(248, 113, 113, 0.5);
-    flex: 0.85;
+    background: rgba(239, 68, 68, 0.45);
+    border-color: rgba(248, 113, 113, 0.7);
+    flex: 0.9;
   }
 
   .mobile-nav-btn:disabled {
@@ -1212,7 +1208,7 @@ onUnmounted(() => {
   .book-wrapper {
     height: 100dvh;
     min-height: 100vh;
-    padding: 10px 0 140px;
+    padding: 10px 0 88px;
     box-sizing: border-box;
   }
 
