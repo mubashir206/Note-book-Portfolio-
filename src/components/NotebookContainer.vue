@@ -105,19 +105,6 @@
         </div>
       </div>
 
-      <!-- Page Indicator (desktop) -->
-      <div v-if="!isMobile" class="page-indicator">
-        <div v-for="(page, index) in indicatorCount" :key="index" 
-             :class="['dot', { active: activeIndicator === index }]"
-             @click.stop="goToPage(index * 2)"
-        ></div>
-      </div>
-
-      <!-- Page Counter (desktop) -->
-      <div v-if="!isMobile" class="page-counter">
-        {{ displayPageLabel }}
-      </div>
-
       <!-- Close hint (desktop only) -->
       <div class="click-hint" v-if="isLastPage && !isMobile">
         <div class="hint-text close-hint">
@@ -126,6 +113,22 @@
       </div>
       </div>
     </transition>
+
+    <!-- Desktop progress — sits just under the book (not off-screen) -->
+    <div v-if="isBookOpen && !isMobile" class="desktop-chrome">
+      <div class="desktop-dots">
+        <button
+          v-for="(page, index) in indicatorCount"
+          :key="index"
+          type="button"
+          class="d-dot"
+          :class="{ active: activeIndicator === index }"
+          :aria-label="'Go to spread ' + (index + 1)"
+          @click="goToPage(index * 2)"
+        ></button>
+      </div>
+      <span class="desktop-page-label">{{ displayPageLabel }}</span>
+    </div>
 
     <!-- Mobile chrome: progress outside book + compact buttons -->
     <div v-if="isBookOpen && isMobile" class="mobile-chrome" @click.stop>
@@ -470,25 +473,29 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0;
+  box-sizing: border-box;
+  padding: 24px 16px 28px;
 }
 
 /* Closed Book Wrapper - Real Book 3D */
 .closed-book-wrapper {
   position: relative;
-  width: 90vw;
-  max-width: 1600px;
-  height: 85vh;
-  max-height: 900px;
+  width: min(90vw, 1400px);
+  height: min(78vh, 820px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
   cursor: pointer;
   perspective: 2000px;
+  flex: 0 0 auto;
 }
 
 /* Real Closed Book Structure */
@@ -892,10 +899,9 @@ onUnmounted(() => {
 .book-container {
   position: relative;
   z-index: 10;
-  width: 90vw;
-  max-width: 1600px;
-  height: 85vh;
-  max-height: 900px;
+  width: min(90vw, 1400px);
+  height: min(78vh, 820px);
+  flex: 0 0 auto;
 }
 
 .book-3d {
@@ -1140,51 +1146,58 @@ onUnmounted(() => {
   right: 30px;
 }
 
-/* Page Indicator */
-.page-indicator {
-  position: absolute;
-  bottom: -50px;
-  left: 50%;
-  transform: translateX(-50%);
+/* Page Indicator / Counter — legacy (desktop now uses .desktop-chrome) */
+.page-indicator,
+.page-counter {
+  display: none;
+}
+
+/* Desktop progress under book */
+.desktop-chrome {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  flex: 0 0 auto;
   z-index: 20;
 }
 
-.dot {
+.desktop-dots {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.d-dot {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.4);
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35);
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid rgba(255, 255, 255, 0.6);
+  transition: all 0.25s ease;
 }
 
-.dot:hover {
+.d-dot:hover {
   background: rgba(255, 255, 255, 0.7);
-  transform: scale(1.2);
+  transform: scale(1.15);
 }
 
-.dot.active {
-  background: white;
-  width: 32px;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.5);
+.d-dot.active {
+  width: 28px;
+  background: #fff;
+  border-color: #fff;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.35);
 }
 
-/* Page Counter */
-.page-counter {
-  position: absolute;
-  bottom: -80px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: white;
-  font-size: 18px;
+.desktop-page-label {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.95rem;
   font-weight: 700;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-  letter-spacing: 1px;
-  z-index: 20;
+  letter-spacing: 0.06em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 /* Mobile chrome — progress + buttons outside book (no overlay) */
@@ -1201,12 +1214,12 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 3px;
     position: fixed;
     left: 50%;
-    bottom: max(4px, env(safe-area-inset-bottom));
+    bottom: max(2px, env(safe-area-inset-bottom));
     transform: translateX(-50%);
-    width: min(94vw, 420px);
+    width: min(96vw, 440px);
     z-index: 100;
     pointer-events: auto;
   }
@@ -1215,9 +1228,10 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
     padding: 0;
+    margin: 0;
     border-radius: 0;
     background: transparent;
     border: none;
@@ -1341,12 +1355,11 @@ onUnmounted(() => {
 }
 
 /* Tablet */
-@media (max-width: 1024px) {
+@media (max-width: 1024px) and (min-width: 769px) {
   .closed-book-wrapper,
   .book-container {
-    width: 94vw;
-    height: 80vh;
-    max-height: 820px;
+    width: min(94vw, 1100px);
+    height: min(72vh, 760px);
   }
 
   .cover-title {
@@ -1360,6 +1373,10 @@ onUnmounted(() => {
   .real-closed-book {
     width: 70%;
   }
+
+  .desktop-chrome {
+    margin-top: 12px;
+  }
 }
 
 /* Mobile / narrow screens — fit in one screen, no page scroll */
@@ -1368,17 +1385,22 @@ onUnmounted(() => {
     height: 100dvh;
     max-height: 100dvh;
     min-height: 0;
-    padding: 4px 6px 72px;
+    padding: 2px 4px 54px;
     box-sizing: border-box;
     overflow: hidden;
     align-items: center;
     justify-content: center;
+    gap: 0;
+  }
+
+  .desktop-chrome {
+    display: none !important;
   }
 
   .closed-book-wrapper {
     width: min(96vw, 440px);
-    height: calc(100dvh - 78px);
-    max-height: calc(100dvh - 78px);
+    height: calc(100dvh - 56px);
+    max-height: calc(100dvh - 56px);
     perspective: 1200px;
   }
 
@@ -1453,8 +1475,8 @@ onUnmounted(() => {
 
   .book-container {
     width: min(96vw, 440px);
-    height: calc(100dvh - 78px);
-    max-height: calc(100dvh - 78px);
+    height: calc(100dvh - 56px);
+    max-height: calc(100dvh - 56px);
     touch-action: pan-y;
   }
 
@@ -1521,8 +1543,8 @@ onUnmounted(() => {
   .closed-book-wrapper,
   .book-container {
     width: min(97vw, 440px);
-    height: calc(100dvh - 74px);
-    max-height: calc(100dvh - 74px);
+    height: calc(100dvh - 52px);
+    max-height: calc(100dvh - 52px);
   }
 }
 
