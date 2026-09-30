@@ -1201,10 +1201,10 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 7px;
+    gap: 5px;
     position: fixed;
     left: 50%;
-    bottom: max(8px, env(safe-area-inset-bottom));
+    bottom: max(4px, env(safe-area-inset-bottom));
     transform: translateX(-50%);
     width: min(94vw, 420px);
     z-index: 100;
@@ -1215,54 +1215,54 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-    padding: 6px 12px;
-    border-radius: 999px;
-    background: rgba(15, 23, 42, 0.55);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    backdrop-filter: none;
+    box-shadow: none;
   }
 
   .mobile-dots {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     flex-wrap: wrap;
     justify-content: center;
-    max-width: 72%;
+    max-width: 75%;
   }
 
   .m-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     padding: 0;
     border: none;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.4);
     cursor: pointer;
     transition: all 0.25s ease;
   }
 
   .m-dot.active {
-    width: 18px;
+    width: 14px;
     background: #fff;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.45);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
   }
 
   .mobile-page-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.58rem;
+    font-weight: 650;
+    letter-spacing: 0.03em;
+    color: rgba(255, 255, 255, 0.85);
     white-space: nowrap;
   }
 
   .mobile-nav {
     display: flex;
     width: 100%;
-    gap: 6px;
+    gap: 5px;
     padding: 0;
     position: static;
     transform: none;
@@ -1275,9 +1275,9 @@ onUnmounted(() => {
     border: 1px solid rgba(255, 255, 255, 0.28);
     background: rgba(15, 23, 42, 0.82);
     color: #fff;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 700;
-    padding: 0.42rem 0.25rem;
+    padding: 0.36rem 0.2rem;
     border-radius: 999px;
     backdrop-filter: blur(8px);
     cursor: pointer;
@@ -1368,7 +1368,7 @@ onUnmounted(() => {
     height: 100dvh;
     max-height: 100dvh;
     min-height: 0;
-    padding: 6px 8px 92px;
+    padding: 4px 6px 72px;
     box-sizing: border-box;
     overflow: hidden;
     align-items: center;
@@ -1376,9 +1376,9 @@ onUnmounted(() => {
   }
 
   .closed-book-wrapper {
-    width: min(94vw, 420px);
-    height: calc(100dvh - 100px);
-    max-height: calc(100dvh - 100px);
+    width: min(96vw, 440px);
+    height: calc(100dvh - 78px);
+    max-height: calc(100dvh - 78px);
     perspective: 1200px;
   }
 
@@ -1452,9 +1452,9 @@ onUnmounted(() => {
   }
 
   .book-container {
-    width: min(94vw, 420px);
-    height: calc(100dvh - 100px);
-    max-height: calc(100dvh - 100px);
+    width: min(96vw, 440px);
+    height: calc(100dvh - 78px);
+    max-height: calc(100dvh - 78px);
     touch-action: pan-y;
   }
 
@@ -1520,9 +1520,9 @@ onUnmounted(() => {
 
   .closed-book-wrapper,
   .book-container {
-    width: min(96vw, 420px);
-    height: calc(100dvh - 96px);
-    max-height: calc(100dvh - 96px);
+    width: min(97vw, 440px);
+    height: calc(100dvh - 74px);
+    max-height: calc(100dvh - 74px);
   }
 }
 
