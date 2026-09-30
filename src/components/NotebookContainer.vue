@@ -45,6 +45,8 @@
         v-if="isBookOpen"
         class="book-container book-pages-active"
         :key="'open-book'"
+        @touchstart.passive="onTouchStart"
+        @touchend="onTouchEnd"
       >
       <div class="book-3d">
         <div class="book-inner">
@@ -280,6 +282,12 @@ const previousPage = () => {
 }
 
 const handleRightPageClick = (event) => {
+  // After a swipe, ignore the click that may fire
+  if (skipClickFromSwipe.value) {
+    skipClickFromSwipe.value = false
+    return
+  }
+
   const interactive = event.target.closest('a, button, input, textarea, select')
   if (interactive) return
 
@@ -344,6 +352,10 @@ const handleMobileNext = () => {
 }
 
 const handleLeftPageClick = () => {
+  if (skipClickFromSwipe.value) {
+    skipClickFromSwipe.value = false
+    return
+  }
   // Desktop: first spread left page click closes book
   if (!canGoPrev.value) {
     closeBook()
@@ -360,6 +372,47 @@ const goToPage = (page) => {
       currentPageIndex.value = page
       isFlipping.value = false
     }, 700)
+  }
+}
+
+// --- Mobile swipe (horizontal only; vertical scroll stays safe) ---
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const skipClickFromSwipe = ref(false)
+const SWIPE_MIN = 50
+
+const onTouchStart = (event) => {
+  if (!isMobile.value || !isBookOpen.value || isFlipping.value) return
+  const t = event.changedTouches?.[0]
+  if (!t) return
+  touchStartX.value = t.clientX
+  touchStartY.value = t.clientY
+}
+
+const onTouchEnd = (event) => {
+  if (!isMobile.value || !isBookOpen.value || isFlipping.value) return
+  const t = event.changedTouches?.[0]
+  if (!t) return
+
+  const dx = t.clientX - touchStartX.value
+  const dy = t.clientY - touchStartY.value
+  const absX = Math.abs(dx)
+  const absY = Math.abs(dy)
+
+  // Only clear horizontal swipes — ignore vertical scrolls / diagonal
+  if (absX < SWIPE_MIN || absX < absY * 1.4) return
+
+  skipClickFromSwipe.value = true
+  setTimeout(() => {
+    skipClickFromSwipe.value = false
+  }, 350)
+
+  if (dx < 0) {
+    // swipe left → next / close on last
+    handleMobileNext()
+  } else {
+    // swipe right → back / close on first
+    handleMobileBack()
   }
 }
 
@@ -1146,9 +1199,9 @@ onUnmounted(() => {
     border: 1px solid rgba(255, 255, 255, 0.35);
     background: rgba(15, 23, 42, 0.88);
     color: #fff;
-    font-size: 0.78rem;
+    font-size: 0.68rem;
     font-weight: 700;
-    padding: 0.75rem 0.4rem;
+    padding: 0.45rem 0.3rem;
     border-radius: 999px;
     backdrop-filter: blur(8px);
     cursor: pointer;
@@ -1165,7 +1218,7 @@ onUnmounted(() => {
   .mobile-nav-btn.close-btn {
     background: rgba(239, 68, 68, 0.45);
     border-color: rgba(248, 113, 113, 0.7);
-    flex: 0.9;
+    flex: 0.85;
   }
 
   .mobile-nav-btn:disabled {
@@ -1239,7 +1292,7 @@ onUnmounted(() => {
     height: 100dvh;
     max-height: 100dvh;
     min-height: 0;
-    padding: 6px 8px 70px;
+    padding: 6px 8px 58px;
     box-sizing: border-box;
     overflow: hidden;
     align-items: center;
@@ -1248,8 +1301,8 @@ onUnmounted(() => {
 
   .closed-book-wrapper {
     width: min(94vw, 420px);
-    height: calc(100dvh - 78px);
-    max-height: calc(100dvh - 78px);
+    height: calc(100dvh - 66px);
+    max-height: calc(100dvh - 66px);
     perspective: 1200px;
   }
 
@@ -1324,8 +1377,9 @@ onUnmounted(() => {
 
   .book-container {
     width: min(94vw, 420px);
-    height: calc(100dvh - 78px);
-    max-height: calc(100dvh - 78px);
+    height: calc(100dvh - 66px);
+    max-height: calc(100dvh - 66px);
+    touch-action: pan-y;
   }
 
   .book-page,
