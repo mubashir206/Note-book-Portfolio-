@@ -105,62 +105,74 @@
         </div>
       </div>
 
-      <!-- Page Indicator -->
-      <div class="page-indicator">
+      <!-- Page Indicator (desktop) -->
+      <div v-if="!isMobile" class="page-indicator">
         <div v-for="(page, index) in indicatorCount" :key="index" 
              :class="['dot', { active: activeIndicator === index }]"
-             @click.stop="goToPage(isMobile ? index : index * 2)"
+             @click.stop="goToPage(index * 2)"
         ></div>
       </div>
 
-      <!-- Page Counter -->
-      <div class="page-counter">
+      <!-- Page Counter (desktop) -->
+      <div v-if="!isMobile" class="page-counter">
         {{ displayPageLabel }}
       </div>
 
-      <!-- Close / first-page hints -->
-      <div class="click-hint" v-if="isLastPage">
+      <!-- Close hint (desktop only) -->
+      <div class="click-hint" v-if="isLastPage && !isMobile">
         <div class="hint-text close-hint">
-          {{ isMobile ? 'Tap page or Close to shut book' : 'Click to Close Book 📕' }}
-        </div>
-      </div>
-      <div class="click-hint" v-else-if="isFirstPage && isMobile">
-        <div class="hint-text close-hint">
-          Left tap or Back = close · Right tap = next
+          Click to Close Book 📕
         </div>
       </div>
       </div>
     </transition>
 
-    <!-- Outside book-container so transform/overflow cannot clip these buttons -->
-    <div v-if="isBookOpen && isMobile" class="mobile-nav" @click.stop>
-      <button
-        type="button"
-        class="mobile-nav-btn"
-        :disabled="isFlipping"
-        @click="handleMobileBack"
-        aria-label="Previous page or close book"
-      >
-        {{ isFirstPage ? 'Close 📕' : '← Back' }}
-      </button>
-      <button
-        type="button"
-        class="mobile-nav-btn close-btn"
-        :disabled="isFlipping"
-        @click="closeBook"
-        aria-label="Close book"
-      >
-        Close 📕
-      </button>
-      <button
-        type="button"
-        class="mobile-nav-btn primary"
-        :disabled="(!canGoNext && !isLastPage) || isFlipping"
-        @click="handleMobileNext"
-        aria-label="Next page"
-      >
-        {{ isLastPage && !canGoNext ? 'Close 📕' : 'Next →' }}
-      </button>
+    <!-- Mobile chrome: progress outside book + compact buttons -->
+    <div v-if="isBookOpen && isMobile" class="mobile-chrome" @click.stop>
+      <div class="mobile-progress">
+        <div class="mobile-dots">
+          <button
+            v-for="(page, index) in indicatorCount"
+            :key="index"
+            type="button"
+            class="m-dot"
+            :class="{ active: activeIndicator === index }"
+            :aria-label="'Go to page ' + (index + 1)"
+            @click="goToPage(index)"
+          ></button>
+        </div>
+        <span class="mobile-page-label">{{ displayPageLabel }}</span>
+      </div>
+
+      <div class="mobile-nav">
+        <button
+          type="button"
+          class="mobile-nav-btn"
+          :disabled="isFlipping"
+          @click="handleMobileBack"
+          aria-label="Previous page or close book"
+        >
+          {{ isFirstPage ? 'Close' : '← Back' }}
+        </button>
+        <button
+          type="button"
+          class="mobile-nav-btn close-btn"
+          :disabled="isFlipping"
+          @click="closeBook"
+          aria-label="Close book"
+        >
+          Close
+        </button>
+        <button
+          type="button"
+          class="mobile-nav-btn primary"
+          :disabled="(!canGoNext && !isLastPage) || isFlipping"
+          @click="handleMobileNext"
+          aria-label="Next page"
+        >
+          {{ isLastPage && !canGoNext ? 'Close' : 'Next →' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -1175,33 +1187,97 @@ onUnmounted(() => {
   z-index: 20;
 }
 
-/* Mobile Back / Close / Next — fixed to viewport so overflow can't hide it */
+/* Mobile chrome — progress + buttons outside book (no overlay) */
+.mobile-chrome {
+  display: none;
+}
+
 .mobile-nav {
   display: none;
 }
 
 @media (max-width: 768px) {
-  .mobile-nav {
+  .mobile-chrome {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
     position: fixed;
     left: 50%;
     bottom: max(8px, env(safe-area-inset-bottom));
     transform: translateX(-50%);
     width: min(94vw, 420px);
-    gap: 8px;
     z-index: 100;
-    padding: 0 8px;
     pointer-events: auto;
+  }
+
+  .mobile-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  .mobile-dots {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 72%;
+  }
+
+  .m-dot {
+    width: 6px;
+    height: 6px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+
+  .m-dot.active {
+    width: 18px;
+    background: #fff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.45);
+  }
+
+  .mobile-page-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.92);
+    white-space: nowrap;
+  }
+
+  .mobile-nav {
+    display: flex;
+    width: 100%;
+    gap: 6px;
+    padding: 0;
+    position: static;
+    transform: none;
+    left: auto;
+    bottom: auto;
   }
 
   .mobile-nav-btn {
     flex: 1;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    background: rgba(15, 23, 42, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(15, 23, 42, 0.82);
     color: #fff;
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     font-weight: 700;
-    padding: 0.45rem 0.3rem;
+    padding: 0.42rem 0.25rem;
     border-radius: 999px;
     backdrop-filter: blur(8px);
     cursor: pointer;
@@ -1216,9 +1292,9 @@ onUnmounted(() => {
   }
 
   .mobile-nav-btn.close-btn {
-    background: rgba(239, 68, 68, 0.45);
-    border-color: rgba(248, 113, 113, 0.7);
-    flex: 0.85;
+    background: rgba(239, 68, 68, 0.42);
+    border-color: rgba(248, 113, 113, 0.65);
+    flex: 0.8;
   }
 
   .mobile-nav-btn:disabled {
@@ -1292,7 +1368,7 @@ onUnmounted(() => {
     height: 100dvh;
     max-height: 100dvh;
     min-height: 0;
-    padding: 6px 8px 58px;
+    padding: 6px 8px 92px;
     box-sizing: border-box;
     overflow: hidden;
     align-items: center;
@@ -1301,8 +1377,8 @@ onUnmounted(() => {
 
   .closed-book-wrapper {
     width: min(94vw, 420px);
-    height: calc(100dvh - 66px);
-    max-height: calc(100dvh - 66px);
+    height: calc(100dvh - 100px);
+    max-height: calc(100dvh - 100px);
     perspective: 1200px;
   }
 
@@ -1377,8 +1453,8 @@ onUnmounted(() => {
 
   .book-container {
     width: min(94vw, 420px);
-    height: calc(100dvh - 66px);
-    max-height: calc(100dvh - 66px);
+    height: calc(100dvh - 100px);
+    max-height: calc(100dvh - 100px);
     touch-action: pan-y;
   }
 
@@ -1417,30 +1493,14 @@ onUnmounted(() => {
     border-radius: 16px;
   }
 
-  /* Keep dots/counter inside the book — no extra vertical space */
-  .page-indicator {
-    bottom: 10px;
-    gap: 8px;
-  }
-
+  /* Desktop dots/counter stay off mobile; chrome handles progress */
+  .page-indicator,
   .page-counter {
-    bottom: 28px;
-    font-size: 11px;
-    opacity: 0.85;
-  }
-
-  /* Hints eat top space and cause scroll — hide on mobile (nav buttons exist) */
-  .click-hint {
     display: none;
   }
 
-  .dot {
-    width: 8px;
-    height: 8px;
-  }
-
-  .dot.active {
-    width: 24px;
+  .click-hint {
+    display: none;
   }
 }
 
@@ -1461,8 +1521,8 @@ onUnmounted(() => {
   .closed-book-wrapper,
   .book-container {
     width: min(96vw, 420px);
-    height: calc(100dvh - 74px);
-    max-height: calc(100dvh - 74px);
+    height: calc(100dvh - 96px);
+    max-height: calc(100dvh - 96px);
   }
 }
 
