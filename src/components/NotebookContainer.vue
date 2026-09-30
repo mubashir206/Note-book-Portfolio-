@@ -1132,9 +1132,9 @@ onUnmounted(() => {
     display: flex;
     position: fixed;
     left: 50%;
-    bottom: max(12px, env(safe-area-inset-bottom));
+    bottom: max(8px, env(safe-area-inset-bottom));
     transform: translateX(-50%);
-    width: min(96vw, 460px);
+    width: min(94vw, 420px);
     gap: 8px;
     z-index: 100;
     padding: 0 8px;
@@ -1233,19 +1233,23 @@ onUnmounted(() => {
   }
 }
 
-/* Mobile / narrow screens */
+/* Mobile / narrow screens — fit in one screen, no page scroll */
 @media (max-width: 768px) {
   .book-wrapper {
     height: 100dvh;
-    min-height: 100vh;
-    padding: 10px 0 88px;
+    max-height: 100dvh;
+    min-height: 0;
+    padding: 6px 8px 70px;
     box-sizing: border-box;
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
   }
 
   .closed-book-wrapper {
-    width: min(96vw, 460px);
-    height: min(74dvh, 680px);
-    max-height: none;
+    width: min(94vw, 420px);
+    height: calc(100dvh - 78px);
+    max-height: calc(100dvh - 78px);
     perspective: 1200px;
   }
 
@@ -1255,7 +1259,7 @@ onUnmounted(() => {
   }
 
   .real-closed-book:hover {
-    transform: rotateY(-4deg) translateY(-4px);
+    transform: rotateY(-4deg) translateY(-2px);
   }
 
   .book-spine-edge {
@@ -1319,9 +1323,9 @@ onUnmounted(() => {
   }
 
   .book-container {
-    width: min(96vw, 460px);
-    height: min(74dvh, 680px);
-    max-height: none;
+    width: min(94vw, 420px);
+    height: calc(100dvh - 78px);
+    max-height: calc(100dvh - 78px);
   }
 
   .book-page,
@@ -1359,29 +1363,21 @@ onUnmounted(() => {
     border-radius: 16px;
   }
 
+  /* Keep dots/counter inside the book — no extra vertical space */
   .page-indicator {
-    bottom: -42px;
+    bottom: 10px;
     gap: 8px;
   }
 
   .page-counter {
-    bottom: -64px;
-    font-size: 13px;
+    bottom: 28px;
+    font-size: 11px;
+    opacity: 0.85;
   }
 
-  .page-indicator {
-    bottom: -38px;
-  }
-
+  /* Hints eat top space and cause scroll — hide on mobile (nav buttons exist) */
   .click-hint {
-    top: -48px;
-    width: 90%;
-  }
-
-  .hint-text {
-    font-size: 12px;
-    padding: 8px 14px;
-    text-align: center;
+    display: none;
   }
 
   .dot {
@@ -1410,7 +1406,9 @@ onUnmounted(() => {
 
   .closed-book-wrapper,
   .book-container {
-    width: 96vw;
+    width: min(96vw, 420px);
+    height: calc(100dvh - 74px);
+    max-height: calc(100dvh - 74px);
   }
 }
 
