@@ -8,12 +8,12 @@
     <div class="space-y-4">
       <div class="flex justify-between items-start flex-wrap gap-2">
         <div>
-          <h3 class="text-xl sm:text-2xl font-bold text-gray-800">APE IT Solutions</h3>
+          <h3 class="text-xl sm:text-2xl font-bold text-gray-800">Synch Travel</h3>
           <p class="text-base sm:text-lg text-blue-600 font-semibold">Laravel Full Stack Developer</p>
         </div>
         <div class="text-left sm:text-right">
           <p class="text-sm font-semibold text-gray-600">Oct 2023 - Present</p>
-          <p class="text-sm text-gray-500">(3+ Years)</p>
+          <p class="text-sm text-gray-500">(3.5+ Years)</p>
         </div>
       </div>
 
